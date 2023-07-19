@@ -1,0 +1,1 @@
+Just playing around with nicegui, this project does not do anything :D
