@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
-from nicegui import ui, app
-import nicegui_test.data_views.details as details
-import nicegui_test.data_views.list as list_view
-from nicegui_test.borders import make_borders
+from nicegui import app, ui
+from starlette.responses import RedirectResponse
+
+import nicegui_test.frontend.customize as customize
+import nicegui_test.frontend.data_views.details as details
+import nicegui_test.frontend.data_views.list as list_view
+import nicegui_test.frontend.random_stuff as random_stuff
+
 
 app.include_router(details.router)
 app.include_router(list_view.router)
+app.include_router(customize.router)
+app.include_router(random_stuff.router)
 
-make_borders("Index!")
 
-ui.run()
+@ui.page("/")
+def index():
+    return RedirectResponse(url="/data")
+
+
+ui.run(
+    storage_secret="a not very secret secret (the word secret looks weird) :D",
+    title="The data test",
+)

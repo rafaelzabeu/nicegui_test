@@ -1,7 +1,7 @@
 import uuid
-from nicegui import ui, APIRouter
-from nicegui_test.borders import make_borders
-from nicegui_test.data_stuff import datas, Data, DataState
+from nicegui import app, ui, APIRouter
+from nicegui_test.frontend.borders import make_borders
+from nicegui_test.frontend.data_stuff import datas, Data, DataState
 
 router = APIRouter(prefix="/data")
 
@@ -34,7 +34,7 @@ def _make_details(data: Data):
 
 @router.page("/{id}")
 def data_detail(id: uuid.UUID):
-    make_borders(f"{str(id)}")
+    make_borders(f"{str(id)}", app.storage.user)
     if data := datas.get(id, None):
         _make_details(data=data)
     else:
