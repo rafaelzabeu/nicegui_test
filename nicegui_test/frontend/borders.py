@@ -14,6 +14,7 @@ def make_borders(title: str, user_storage: dict = {}):
         with ui.column():
             ui.link("Data List", "/data")
             ui.link("Random stuff", "/random")
+            ui.link("Process List", "/procs")
             ui.button(icon="settings", on_click=lambda: ui.open("/customize")).props(
                 "bottom-0"
             )

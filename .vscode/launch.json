@@ -8,7 +8,7 @@
             "name": "__main__",
             "type": "python",
             "request": "launch",
-            "program": "/home/rafael/nicegui_test/nicegui_test/__main__.py",
+            "program": "${workspaceFolder}/nicegui_test/__main__.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }
