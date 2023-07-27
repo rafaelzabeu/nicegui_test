@@ -10,6 +10,7 @@ from nicegui_test.frontend.proc_control.nursery import (
     ProcessStates,
     Crib,
     stop_process,
+    remove_process,
 )
 
 router = APIRouter(prefix="/procs")
@@ -21,8 +22,22 @@ async def _update_log(log, crib: Crib):
         if not value:
             return
         value = value.decode()
-        print(value)
         log.push(value)
+
+
+def _delete_crib_modal(crib: Crib):
+    with ui.dialog() as dialog, ui.card():
+        ui.label("This can't be undone.")
+
+        async def _do_delete_crib():
+            await remove_process(crib)
+            ui.open("/procs")
+
+        with ui.row():
+            ui.button("DO IT!", on_click=_do_delete_crib)
+            ui.button("No", on_click=dialog.close)
+
+    dialog.open()
 
 
 @router.page("/{cid}")
@@ -41,10 +56,22 @@ async def detail_view(cid: uuid.UUID):
                 "state",
                 backward=lambda v: v != ProcessStates.stopping
                 and v != ProcessStates.stopped,
+            ).bind_visibility_from(
+                crib,
+                "state",
+                backward=lambda v: v != ProcessStates.stopping
+                and v != ProcessStates.stopped,
+            )
+            ui.button(
+                icon="delete_forever", on_click=lambda: _delete_crib_modal(crib)
+            ).bind_enabled_from(
+                crib, "state", backward=lambda v: v == ProcessStates.stopped
+            ).bind_visibility_from(
+                crib, "state", backward=lambda v: v == ProcessStates.stopped
             )
         if crib.state == ProcessStates.running:
             ui.label("Output")
-            output = ui.log()
+            output = ui.log().classes("resize")
             asyncio.ensure_future(_update_log(output, crib))
 
             async def _send(event):
@@ -52,6 +79,8 @@ async def detail_view(cid: uuid.UUID):
                 await crib.stdin.drain()
                 event.sender.value = ""
 
-            ui.input().on("keydown.enter", _send)
+            ui.input().on("keydown.enter", _send).bind_enabled_from(
+                crib, "state", backward=lambda v: v == ProcessStates.running
+            )
     else:
         ui.label("Not found").tailwind.text_color("red-400").font_size("xl")

@@ -1,3 +1,4 @@
+import random
 from nicegui import ui, APIRouter, app
 from nicegui_test.frontend.borders import make_borders
 import time
@@ -61,8 +62,17 @@ def table_suff():
     ).bind_visibility_from(table, "selected", backward=lambda val: bool(val))
 
 
+@router.page("/log")
+def log_():
+    make_borders("Random log")
+    l = ui.log()
+    l.classes("resize")
+    ui.button("Add line", on_click=lambda: l.push(f"{random.random()}"))
+
+
 @router.page("/")
 def list_():
     make_borders("Random stuff")
     with ui.column():
         ui.link("Table", table_suff)
+        ui.link("Log", log_)

@@ -81,14 +81,15 @@ def stop_process(crib: Crib):
 
 
 async def remove_process(crib: Crib, force_cancel: bool = False):
-    if crib.state != ProcessStates.running or not crib.running_task:
-        if force_cancel:
-            crib.running_task.cancel()
-            await crib.running_task
-        else:
+    if crib.state != ProcessStates.stopped:
+        if not force_cancel:
             raise ValueError(
                 "Process is running. Use `force_cancel` to remove running processes."
             )
+        if crib.process:
+            crib.running_task.cancel()
+            await crib.running_task
+
     cribs.pop(crib.id)
 
 
@@ -121,8 +122,11 @@ async def _crib_lifecycle(crib: Crib):
         raise
     finally:
         crib.state = ProcessStates.stopping
-        if process and not process.returncode:
-            process.kill()
+        try:
+            if process and not process.returncode:
+                process.kill()
+        except ProcessLookupError:
+            pass
 
         crib.state = ProcessStates.stopped
         crib.running_task = None
