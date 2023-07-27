@@ -36,8 +36,7 @@ def list_process():
 
     make_borders("Processes")
     with ui.column():
-        with ui.card():
-            _make_list()
+        _make_list()
         ui.separator()
         with ui.card():
             name_input = ui.input(

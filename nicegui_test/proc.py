@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import random
 import signal
 import os.path
 import asyncio
@@ -46,7 +47,8 @@ async def _writer(file_to_write: Path, append: bool):
                 _queue.task_done()
                 break
 
-            await aprint(to_write)
+            # await aprint(to_write)
+            print(to_write)
             await file.write(to_write)
             await file.write("\n")
             _queue.task_done()
@@ -96,7 +98,13 @@ async def _reader():
     _semaphores.reader_stopped.set_result(True)
 
 
-async def main(file_to_write: Path, append: bool):
+async def random_writer():
+    while True:
+        await _queue.put(f"{isonow()} RECORD: Random data {random.random()}")
+        await asyncio.sleep(0.3)
+
+
+async def main(file_to_write: Path, append: bool, random_records: bool):
     global _queue
     global _semaphores
     _semaphores = _Semaphores(
@@ -104,8 +112,11 @@ async def main(file_to_write: Path, append: bool):
         reader_stopped=asyncio.get_event_loop().create_future(),
     )
     _queue = asyncio.Queue()
+    await _queue.put(f"{isonow()} STARTING")
     asyncio.ensure_future(_reader())
     asyncio.ensure_future(_writer(file_to_write, append))
+    if random_records:
+        asyncio.ensure_future(random_writer())
     await asyncio.gather(_semaphores.reader_stopped, _semaphores.reader_stopped)
 
 
@@ -119,15 +130,19 @@ def entrypoint(
     append: bool = typer.Option(
         True, help="If the file should be appended or overwritten"
     ),
+    write_random_records: bool = typer.Option(
+        False, help="Writes random records from time to time."
+    ),
 ):
     path_to_save = Path(os.path.expandvars(path_to_save.expanduser()))
+    print(f"Starting in {path_to_save}")
     if not path_to_save.exists():
         path_to_save.parent.mkdir(parents=True, exist_ok=True)
 
     # asyncio.get_event_loop().add_signal_handler(signal.SIGINT, _stop)
     # asyncio.get_event_loop().add_signal_handler(signal.SIGTERM, _stop)
 
-    asyncio.run(main(path_to_save, append))
+    asyncio.run(main(path_to_save, append, write_random_records))
     print("Bye :D")
 
 

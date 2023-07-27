@@ -2,6 +2,7 @@ import asyncio
 from collections import UserDict
 from dataclasses import dataclass
 from enum import StrEnum, auto
+import os
 from pathlib import Path
 from typing import Any
 import uuid
@@ -55,10 +56,13 @@ cribs: CribDict[uuid.UUID, Crib] = CribDict({})
 
 def create_process(name: str, logs_dir: Path) -> Crib:
     cid = uuid.uuid4()
+    log_path = Path(
+        os.path.expandvars(os.path.expanduser(logs_dir / f"{str(cid)}.txt"))
+    ).absolute()
     crib = Crib(
         id=cid,
         name=name,
-        log_path=logs_dir / str(cid),
+        log_path=log_path,
     )
     cribs[crib.id] = crib
     task = asyncio.create_task(_crib_lifecycle(crib))
@@ -91,7 +95,17 @@ async def remove_process(crib: Crib, force_cancel: bool = False):
 async def _crib_lifecycle(crib: Crib):
     try:
         process = await asyncio.create_subprocess_exec(
-            " ".join([sys.executable, "-m", "nicegui_test.proc", str(crib.log_path)]),
+            *[
+                sys.executable,
+                # -u makes the output unbufered, making it possible
+                # to read from stdout while the process is running
+                # https://stackoverflow.com/questions/46592284/reading-stdout-from-a-subprocess-in-real-time
+                "-u",
+                "-m",
+                "nicegui_test.proc",
+                str(crib.log_path),
+                # "--write-random-records",
+            ],
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
         )
@@ -103,12 +117,12 @@ async def _crib_lifecycle(crib: Crib):
     except asyncio.CancelledError:
         print(f"Canceled crib {crib.id}")
     except Exception as ex:
-        print(ex)
+        logging.getLogger("uvicorn").exception("Error with process")
         raise
     finally:
         crib.state = ProcessStates.stopping
         if process and not process.returncode:
-            await process.kill()
+            process.kill()
 
         crib.state = ProcessStates.stopped
         crib.running_task = None
